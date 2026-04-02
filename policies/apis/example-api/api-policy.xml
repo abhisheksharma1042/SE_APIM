@@ -1,0 +1,93 @@
+<!--
+  API-Level Policy — Example Items API.
+
+  Validates JWT from Entra External ID (external tenant) and extracts the
+  caller's highest-privilege role into the context variable "callerRole".
+
+  Named Values required (configure in APIM → Named Values):
+    {{external-tenant-id}}     — GUID of your Entra External ID tenant
+    {{external-tenant-domain}} — domain prefix, e.g. contosocustomers
+    {{api-app-id}}             — Application (client) ID of the API app registration
+
+  For existing Azure AD B2C tenants, replace <openid-config> with:
+    https://{{b2c-tenant}}.b2clogin.com/{{b2c-tenant}}.onmicrosoft.com/{{user-flow}}/v2.0/.well-known/openid-configuration
+-->
+<policies>
+  <inbound>
+    <base />
+
+    <!-- Step 1: Validate the Bearer JWT -->
+    <validate-jwt
+      header-name="Authorization"
+      failed-validation-httpcode="401"
+      failed-validation-error-message="Unauthorized: a valid Bearer token from the Contoso identity provider is required"
+      require-expiration-time="true"
+      require-scheme="Bearer"
+      require-signed-tokens="true"
+      clock-skew="300">
+
+      <!-- Entra External ID (CIAM) discovery endpoint -->
+      <openid-config url="https://{{external-tenant-domain}}.ciamlogin.com/{{external-tenant-id}}/v2.0/.well-known/openid-configuration" />
+
+      <!-- Accept both bare app ID and Application ID URI as audience -->
+      <audiences>
+        <audience>{{api-app-id}}</audience>
+        <audience>api://{{api-app-id}}</audience>
+      </audiences>
+
+      <!-- Accepted issuers -->
+      <issuers>
+        <issuer>https://login.microsoftonline.com/{{external-tenant-id}}/v2.0</issuer>
+        <issuer>https://{{external-tenant-domain}}.ciamlogin.com/{{external-tenant-id}}/v2.0</issuer>
+      </issuers>
+
+    </validate-jwt>
+
+    <!-- Step 2: Extract the highest-privilege role from the validated token -->
+    <set-variable
+      name="callerRole"
+      value="@{
+        // Token is already validated above — safe to decode claims
+        var authHeader = context.Request.Headers.GetValueOrDefault("Authorization", "");
+        var token = authHeader.StartsWith("Bearer ") ? authHeader.Substring(7) : authHeader;
+        var handler = new System.IdentityModel.Tokens.Jwt.JwtSecurityTokenHandler();
+        var jwt = handler.ReadJwtToken(token);
+
+        var roles = jwt.Claims
+          .Where(c => c.Type == "roles")
+          .Select(c => c.Value)
+          .ToArray();
+
+        if (roles.Contains("api.admin"))  return "api.admin";
+        if (roles.Contains("api.write"))  return "api.write";
+        if (roles.Contains("api.read"))   return "api.read";
+        return "none";
+      }" />
+
+    <!-- Step 3: Reject callers with no recognised role at all -->
+    <choose>
+      <when condition="@(context.Variables.GetValueOrDefault<string>("callerRole") == "none")">
+        <return-response>
+          <set-status code="403" reason="Forbidden" />
+          <set-header name="Content-Type" exists-action="override">
+            <value>application/json</value>
+          </set-header>
+          <set-body>{
+            "error": "Forbidden",
+            "message": "Token is valid but no recognised API role was found. Ensure the user or application has been assigned an app role (api.read, api.write, or api.admin) in the Entra External ID tenant."
+          }</set-body>
+        </return-response>
+      </when>
+    </choose>
+
+  </inbound>
+  <backend>
+    <base />
+  </backend>
+  <outbound>
+    <base />
+  </outbound>
+  <on-error>
+    <base />
+  </on-error>
+</policies>

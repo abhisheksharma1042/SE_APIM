@@ -1,0 +1,20 @@
+{
+  // Associate APIM policy XML files with the APIM policy schema for IntelliSense
+  "xml.fileAssociations": [
+    {
+      "pattern": "**/policies/**/*.xml",
+      "systemId": "https://schema.management.azure.com/schemas/policy/policy.xsd"
+    },
+    {
+      "pattern": "**/apim-artifacts/**/policy.xml",
+      "systemId": "https://schema.management.azure.com/schemas/policy/policy.xsd"
+    }
+  ],
+  "xml.validation.enabled": true,
+  "[xml]": {
+    "editor.formatOnSave": true,
+    "editor.defaultFormatter": "redhat.vscode-xml"
+  },
+  // Show Azure API Management tree in sidebar automatically
+  "azure-api-management.showExplorer": true
+}

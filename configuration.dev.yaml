@@ -1,0 +1,17 @@
+# APIOps publisher configuration overrides for the DEV environment.
+# Values here override artifact defaults when deploying to the dev APIM instance.
+# Reference: https://azure.github.io/apiops/
+
+apimServiceName: contoso-apim-dev
+
+namedValues:
+  - name: external-tenant-id
+    value: "00000000-0000-0000-0000-000000000000"      # DEV external tenant
+  - name: external-tenant-domain
+    value: "contosocustomers-dev"
+  - name: api-app-id
+    value: "00000000-0000-0000-0000-000000000000"      # DEV API app registration
+
+apis:
+  - name: example-api
+    serviceUrl: "https://dev-backend.contoso.com/api"

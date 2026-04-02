@@ -1,0 +1,26 @@
+<!--
+  Product Policy — Standard tier.
+  Applies to all APIs within this product, after the global policy.
+-->
+<policies>
+  <inbound>
+    <base />
+    <!-- Per-subscription rate limit: 1000 calls per hour -->
+    <rate-limit calls="1000" renewal-period="3600" remaining-calls-variable-name="remainingCalls" />
+    <!-- Per-subscription daily quota: 10,000 calls per day -->
+    <quota calls="10000" renewal-period="86400" />
+  </inbound>
+  <backend>
+    <base />
+  </backend>
+  <outbound>
+    <!-- Surface rate limit headers to caller -->
+    <set-header name="X-Rate-Limit-Remaining" exists-action="override">
+      <value>@(context.Variables.GetValueOrDefault<int>("remainingCalls").ToString())</value>
+    </set-header>
+    <base />
+  </outbound>
+  <on-error>
+    <base />
+  </on-error>
+</policies>

@@ -1,0 +1,64 @@
+name: Extract APIM Configuration
+
+on:
+  # Run daily at 2am UTC to detect manual portal changes (drift detection)
+  schedule:
+    - cron: '0 2 * * *'
+  # Allow manual trigger from the Actions tab
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  extract:
+    name: Extract APIM artifacts
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Login to Azure (OIDC — no client secret)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Run APIOps Extractor
+        uses: Azure/apiops@v5
+        with:
+          command: extract
+          AZURE_RESOURCE_GROUP_NAME: ${{ secrets.APIM_RESOURCE_GROUP }}
+          API_MANAGEMENT_SERVICE_NAME: ${{ secrets.APIM_SERVICE_NAME }}
+          API_MANAGEMENT_SERVICE_OUTPUT_FOLDER_PATH: apim-artifacts
+
+      - name: Create Pull Request if drift detected
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: "chore: sync APIM configuration from Azure portal"
+          branch: apim-sync/auto-extract-${{ github.run_number }}
+          delete-branch: true
+          title: "[APIM Sync] Configuration drift detected"
+          body: |
+            ## APIM Configuration Drift Detected
+
+            The automated daily extraction found differences between the
+            **live APIM configuration** and what is tracked in this repository.
+
+            This usually means someone edited configuration directly in the Azure portal.
+
+            ### Review checklist
+            - [ ] Changes are intentional and expected
+            - [ ] Policy changes have been reviewed for security implications
+            - [ ] Named value changes don't expose secrets
+            - [ ] If changes should be discarded, close this PR and revert in the portal
+
+            **Merge this PR** to bring the repository up to date.
+            **Close without merging** if these changes were unintentional.
+          labels: |
+            apim-sync
+            automated

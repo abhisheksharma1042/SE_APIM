@@ -1,0 +1,69 @@
+<!--
+  Global Policy — applies to ALL APIs in the APIM instance.
+  This runs before any product/API/operation policy.
+
+  Replace Named Value placeholders ({{...}}) with your actual Named Values
+  configured in APIM.
+-->
+<policies>
+  <inbound>
+    <base />
+    <!-- CORS: Allow SPA clients. Tighten origins in production. -->
+    <cors allow-credentials="true">
+      <allowed-origins>
+        <origin>https://app.contoso.com</origin>
+        <origin>http://localhost:3000</origin>
+      </allowed-origins>
+      <allowed-methods preflight-result-max-age="300">
+        <method>GET</method>
+        <method>POST</method>
+        <method>PUT</method>
+        <method>PATCH</method>
+        <method>DELETE</method>
+        <method>OPTIONS</method>
+      </allowed-methods>
+      <allowed-headers>
+        <header>Authorization</header>
+        <header>Content-Type</header>
+        <header>Accept</header>
+        <header>Ocp-Apim-Subscription-Key</header>
+        <header>X-Request-Id</header>
+      </allowed-headers>
+      <expose-headers>
+        <header>X-Request-Id</header>
+      </expose-headers>
+    </cors>
+    <!-- Propagate a request ID for tracing -->
+    <set-header name="X-Request-Id" exists-action="skip">
+      <value>@(context.RequestId.ToString())</value>
+    </set-header>
+  </inbound>
+  <backend>
+    <base />
+  </backend>
+  <outbound>
+    <!-- Remove server fingerprinting headers -->
+    <set-header name="X-Powered-By" exists-action="delete" />
+    <set-header name="X-AspNet-Version" exists-action="delete" />
+    <set-header name="Server" exists-action="delete" />
+    <!-- Echo the request ID back to caller for correlation -->
+    <set-header name="X-Request-Id" exists-action="override">
+      <value>@(context.RequestId.ToString())</value>
+    </set-header>
+    <base />
+  </outbound>
+  <on-error>
+    <base />
+    <!-- Return structured error JSON -->
+    <set-header name="Content-Type" exists-action="override">
+      <value>application/json</value>
+    </set-header>
+    <set-body>@{
+      return new JObject(
+        new JProperty("error", context.LastError.Source),
+        new JProperty("message", context.LastError.Message),
+        new JProperty("requestId", context.RequestId)
+      ).ToString();
+    }</set-body>
+  </on-error>
+</policies>

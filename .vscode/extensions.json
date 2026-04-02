@@ -1,0 +1,12 @@
+{
+  "recommendations": [
+    "ms-azuretools.vscode-apimanagement",
+    "ms-vscode.azure-account",
+    "ms-azuretools.vscode-azureresourcegroups",
+    "ms-azuretools.vscode-bicep",
+    "redhat.vscode-xml",
+    "GitHub.copilot",
+    "GitHub.copilot-chat",
+    "ms-vscode.vscode-github-issue-notebooks"
+  ]
+}

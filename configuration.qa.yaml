@@ -1,0 +1,15 @@
+# APIOps publisher configuration overrides for the QA environment.
+
+apimServiceName: contoso-apim-qa
+
+namedValues:
+  - name: external-tenant-id
+    value: "00000000-0000-0000-0000-000000000000"      # QA external tenant (can share dev)
+  - name: external-tenant-domain
+    value: "contosocustomers-dev"
+  - name: api-app-id
+    value: "00000000-0000-0000-0000-000000000000"      # QA API app registration
+
+apis:
+  - name: example-api
+    serviceUrl: "https://qa-backend.contoso.com/api"

@@ -1,0 +1,107 @@
+name: Publish APIM Configuration
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'apim-artifacts/**'
+      - 'policies/**'
+      - 'configuration.*.yaml'
+
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Target environment to publish to
+        required: true
+        default: dev
+        type: choice
+        options:
+          - dev
+          - qa
+          - prod
+
+permissions:
+  contents: read
+  id-token: write   # Required for OIDC authentication
+
+jobs:
+  # ─── DEV ──────────────────────────────────────────────────────────────────
+  publish-dev:
+    name: Publish to DEV
+    runs-on: ubuntu-latest
+    environment: dev
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Login to Azure
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Publish to DEV APIM
+        uses: Azure/apiops@v5
+        with:
+          command: publish
+          AZURE_RESOURCE_GROUP_NAME: ${{ secrets.APIM_RESOURCE_GROUP }}
+          API_MANAGEMENT_SERVICE_NAME: ${{ secrets.APIM_SERVICE_NAME }}
+          API_MANAGEMENT_SERVICE_OUTPUT_FOLDER_PATH: apim-artifacts
+          CONFIGURATION_YAML_PATH: configuration.dev.yaml
+
+  # ─── QA ───────────────────────────────────────────────────────────────────
+  publish-qa:
+    name: Publish to QA
+    runs-on: ubuntu-latest
+    environment: qa          # GitHub environment — add manual approval gate here
+    needs: publish-dev
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Login to Azure (QA subscription)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.QA_AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.QA_AZURE_SUBSCRIPTION_ID }}
+
+      - name: Publish to QA APIM
+        uses: Azure/apiops@v5
+        with:
+          command: publish
+          AZURE_RESOURCE_GROUP_NAME: ${{ secrets.QA_APIM_RESOURCE_GROUP }}
+          API_MANAGEMENT_SERVICE_NAME: ${{ secrets.QA_APIM_SERVICE_NAME }}
+          API_MANAGEMENT_SERVICE_OUTPUT_FOLDER_PATH: apim-artifacts
+          CONFIGURATION_YAML_PATH: configuration.qa.yaml
+
+  # ─── PROD ─────────────────────────────────────────────────────────────────
+  publish-prod:
+    name: Publish to PROD
+    runs-on: ubuntu-latest
+    environment: prod        # REQUIRES manual approval in GitHub environment settings
+    needs: publish-qa
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Login to Azure (PROD subscription)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.PROD_AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.PROD_AZURE_SUBSCRIPTION_ID }}
+
+      - name: Publish to PROD APIM
+        uses: Azure/apiops@v5
+        with:
+          command: publish
+          AZURE_RESOURCE_GROUP_NAME: ${{ secrets.PROD_APIM_RESOURCE_GROUP }}
+          API_MANAGEMENT_SERVICE_NAME: ${{ secrets.PROD_APIM_SERVICE_NAME }}
+          API_MANAGEMENT_SERVICE_OUTPUT_FOLDER_PATH: apim-artifacts
+          CONFIGURATION_YAML_PATH: configuration.prod.yaml

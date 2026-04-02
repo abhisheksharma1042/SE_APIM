@@ -1,0 +1,15 @@
+# APIOps publisher configuration overrides for the PROD environment.
+
+apimServiceName: contoso-apim-prod
+
+namedValues:
+  - name: external-tenant-id
+    value: "00000000-0000-0000-0000-000000000000"      # PROD external tenant
+  - name: external-tenant-domain
+    value: "contosocustomers"
+  - name: api-app-id
+    value: "00000000-0000-0000-0000-000000000000"      # PROD API app registration
+
+apis:
+  - name: example-api
+    serviceUrl: "https://backend.contoso.com/api"

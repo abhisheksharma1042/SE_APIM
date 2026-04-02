@@ -1,0 +1,21 @@
+# Environment / secrets — NEVER commit
+.env
+*.local
+
+# Named values with secrets (APIOps may extract these — exclude from git)
+apim-artifacts/named-values/namedValues.json
+
+# macOS
+.DS_Store
+**/.DS_Store
+
+# VS Code local settings (keep extensions.json and settings.json tracked)
+.vscode/launch.json
+.vscode/*.code-workspace
+
+# Node (if any tooling added)
+node_modules/
+npm-debug.log*
+
+# Logs
+*.log

@@ -1,0 +1,32 @@
+<!--
+  Operation Policy — GET /items
+  Requires: api.read role or higher (api.write, api.admin).
+  The "callerRole" variable is set by the parent API-level policy.
+-->
+<policies>
+  <inbound>
+    <base />
+    <!-- Allow all recognised roles — block only "none" (already caught at API level,
+         but kept here as a defence-in-depth check if this policy is used standalone) -->
+    <choose>
+      <when condition="@(context.Variables.GetValueOrDefault<string>("callerRole", "none") == "none")">
+        <return-response>
+          <set-status code="403" reason="Forbidden" />
+          <set-header name="Content-Type" exists-action="override">
+            <value>application/json</value>
+          </set-header>
+          <set-body>{"error": "Forbidden", "message": "api.read role or higher required for GET /items"}</set-body>
+        </return-response>
+      </when>
+    </choose>
+  </inbound>
+  <backend>
+    <base />
+  </backend>
+  <outbound>
+    <base />
+  </outbound>
+  <on-error>
+    <base />
+  </on-error>
+</policies>
