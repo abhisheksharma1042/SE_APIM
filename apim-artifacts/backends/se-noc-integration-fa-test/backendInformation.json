@@ -1,0 +1,15 @@
+{
+  "properties": {
+    "credentials": {
+      "header": {
+        "x-functions-key": [
+          "{{se-noc-integration-fa-test-key}}"
+        ]
+      }
+    },
+    "description": "se-noc-integration-fa-test",
+    "protocol": "http",
+    "resourceId": "https://management.azure.com/subscriptions/3870d1e4-c958-479f-a241-97b2d2fb1716/resourceGroups/rg-jsxengineering/providers/Microsoft.Web/sites/se-noc-integration-fa-test",
+    "url": "https://se-noc-integration-fa-test.azurewebsites.net"
+  }
+}

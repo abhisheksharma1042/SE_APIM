@@ -1,0 +1,11 @@
+{
+  "properties": {
+    "displayName": "se-noc-integration-fa-test-key",
+    "secret": true,
+    "tags": [
+      "key",
+      "function",
+      "auto"
+    ]
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "properties": {
+    "scope": "/subscriptions/3870d1e4-c958-479f-a241-97b2d2fb1716/resourceGroups/rg-jsxengineering/providers/Microsoft.ApiManagement/service/Intergration-API-Gateway-Test/products/starter",
+    "allowTracing": false,
+    "ownerId": "/subscriptions/3870d1e4-c958-479f-a241-97b2d2fb1716/resourceGroups/rg-jsxengineering/providers/Microsoft.ApiManagement/service/Intergration-API-Gateway-Test/users/1",
+    "state": "active"
+  }
+}
