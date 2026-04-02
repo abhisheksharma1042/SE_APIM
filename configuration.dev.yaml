@@ -1,17 +1,17 @@
-# APIOps publisher configuration overrides for the DEV environment.
-# Values here override artifact defaults when deploying to the dev APIM instance.
-# Reference: https://azure.github.io/apiops/
+# APIOps publisher configuration overrides for the DEV/TEST environment.
+# Drives: scripts/publish-apim.sh and .github/workflows/publish.yml
+# Values here override artifact defaults when publishing to the JSX test APIM instance.
 
-apimServiceName: contoso-apim-dev
+apimServiceName: Intergration-API-Gateway-Test
 
 namedValues:
   - name: external-tenant-id
-    value: "00000000-0000-0000-0000-000000000000"      # DEV external tenant
+    value: "44557ddd-5eb1-45ca-8f8f-b939e0b59c88"
   - name: external-tenant-domain
-    value: "contosocustomers-dev"
+    value: "jsxdev"
   - name: api-app-id
-    value: "00000000-0000-0000-0000-000000000000"      # DEV API app registration
+    value: "7e000b35-50be-4c6d-9749-95549f566df2"
 
 apis:
-  - name: example-api
-    serviceUrl: "https://dev-backend.contoso.com/api"
+  - name: noc-service
+    serviceUrl: "https://jsx-uat.noc.vmc.navblue.cloud/RestAPI"

@@ -1,31 +1,95 @@
 <!--
-    - Policies are applied in the order they appear.
-    - Position <base/> inside a section to inherit policies from the outer scope.
-    - Comments within policies are not preserved.
+  NOC.Service API Policy
+  ======================
+  Inbound flow:
+    1. validate-jwt  — verify Bearer token from Entra External ID (CIAM)
+                       stores validated token in context variable "jwtToken"
+                       returns 401 if missing, expired, or invalid signature
+    2. set-variable  — read roles claim from the Jwt context object (APIM-native,
+                       no external assemblies needed)
+    3. choose        — return 403 if token has no recognised noc.* role
+    4. set-header    — overwrite Authorization with Basic credential for NOC backend
+                       (jsx-uat.noc.vmc.navblue.cloud/RestAPI speaks Basic auth, not JWT)
+    5. base          — inherit global policy (CORS etc.)
+
+  Named Values required in APIM:
+    {{external-tenant-id}}     = 44557ddd-5eb1-45ca-8f8f-b939e0b59c88
+    {{external-tenant-domain}} = jsxdev
+    {{api-app-id}}             = 7e000b35-50be-4c6d-9749-95549f566df2
+    {{noc-backend-basic-auth}} = Basic <base64> (secret named value)
 -->
-<!-- Add policies as children to the <inbound>, <outbound>, <backend>, and <on-error> elements -->
 <policies>
-	<!-- Throttle, authorize, validate, cache, or transform the requests -->
-	<inbound>
-		<choose>
-			<when condition="@(string.IsNullOrEmpty(context.Request.Headers.GetValueOrDefault("Authorization", "")))">
-				<set-header name="Authorization" exists-action="override">
-					<value>Basic YXNoYXJtYTpVb3duZGRheTIyIyM=</value>
-				</set-header>
-			</when>
-		</choose>
-		<base />
-	</inbound>
-	<!-- Control if and how the requests are forwarded to services  -->
-	<backend>
-		<base />
-	</backend>
-	<!-- Customize the responses -->
-	<outbound>
-		<base />
-	</outbound>
-	<!-- Handle exceptions and customize error responses  -->
-	<on-error>
-		<base />
-	</on-error>
+  <inbound>
+
+    <!-- 1. Validate caller's Bearer JWT issued by Entra External ID (CIAM).
+         output-token-variable-name stores the validated Jwt object for Step 2. -->
+    <validate-jwt
+      header-name="Authorization"
+      failed-validation-httpcode="401"
+      failed-validation-error-message="Unauthorized: a valid Bearer token from the JSX identity provider is required"
+      require-expiration-time="true"
+      require-scheme="Bearer"
+      require-signed-tokens="true"
+      clock-skew="300"
+      output-token-variable-name="jwtToken">
+
+      <openid-config url="https://{{external-tenant-domain}}.ciamlogin.com/{{external-tenant-id}}/v2.0/.well-known/openid-configuration" />
+
+      <audiences>
+        <audience>{{api-app-id}}</audience>
+        <audience>api://{{api-app-id}}</audience>
+      </audiences>
+
+      <issuers>
+        <issuer>https://login.microsoftonline.com/{{external-tenant-id}}/v2.0</issuer>
+        <issuer>https://{{external-tenant-domain}}.ciamlogin.com/{{external-tenant-id}}/v2.0</issuer>
+      </issuers>
+
+    </validate-jwt>
+
+    <!-- 2. Extract highest-privilege noc.* role from the validated Jwt object.
+         jwt.Claims is IReadOnlyDictionary<string, string[]> in APIM expressions. -->
+    <set-variable
+      name="callerRole"
+      value="@{
+        var jwt = (Jwt)context.Variables["jwtToken"];
+        var roles = jwt.Claims.ContainsKey("roles") ? jwt.Claims["roles"] : new string[0];
+        if (roles.Contains("noc.admin"))      { return "noc.admin"; }
+        if (roles.Contains("noc.operations")) { return "noc.operations"; }
+        if (roles.Contains("noc.readonly"))   { return "noc.readonly"; }
+        return "none";
+      }" />
+
+    <!-- 3. Reject callers who have a valid token but no noc.* role assigned -->
+    <choose>
+      <when condition="@(context.Variables.GetValueOrDefault<string>("callerRole") == "none")">
+        <return-response>
+          <set-status code="403" reason="Forbidden" />
+          <set-header name="Content-Type" exists-action="override">
+            <value>application/json</value>
+          </set-header>
+          <set-body>{"error":"Forbidden","message":"Token is valid but no recognised NOC role found. Ensure the application has been assigned noc.readonly, noc.operations, or noc.admin in the JSX identity provider."}</set-body>
+        </return-response>
+      </when>
+    </choose>
+
+    <!-- 4. Replace JWT with Basic auth before forwarding to the NOC backend.
+         Must run AFTER validate-jwt — if it ran first the validator would
+         see "Basic ..." instead of "Bearer ..." and return 401. -->
+    <set-header name="Authorization" exists-action="override">
+      <value>{{noc-backend-basic-auth}}</value>
+    </set-header>
+
+    <!-- 5. Inherit global policy (CORS) -->
+    <base />
+  </inbound>
+  <backend>
+    <base />
+  </backend>
+  <outbound>
+    <base />
+  </outbound>
+  <on-error>
+    <base />
+  </on-error>
 </policies>
